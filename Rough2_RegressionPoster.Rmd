@@ -1,0 +1,436 @@
+```{r}
+library(akima)
+library(reshape2)
+library(ggplot2)
+library(dplyr)
+library(scatterplot3d)
+library(psych)
+library(ggplot2)
+library(car)
+library(gclus)
+library(GGally)
+library(corrplot)
+library(fields)
+
+deathrate <- read.table("x28_NoHeader", header = FALSE)
+
+colnames(deathrate) <- c("Index",
+                         "A1",
+                         "A2",
+                         "A3",
+                         "A4",
+                         "A5",
+                         "A6",
+                         "A7",
+                         "A8",
+                         "A9",
+                         "A10",
+                         "A11",
+                         "A12",
+                         "A13",                         
+                         "A14",
+                         "A15",
+                         "B")
+# colnames(deathrate) <- c("Index",
+#                          "percip",
+#                          "Jantemp",
+#                          "A6emp",
+#                          "popover65",
+#                          "housesize",
+#                          "schooling",
+#                          "kitchen",
+#                          "urbanpop",
+#                          "nonwhite",
+#                          "officeworkers",
+#                          "poorfamily",
+#                          "hydrocarbonpollution",
+#                          "nitrogenpollution",                         
+#                          "sulfardioxidepollution",
+#                          "humidity",
+#                          "Death Rates")
+
+# 
+# Index
+# A1 average annual precipitation in inches
+# A2 average January temperature in degrees Fahrenheit
+# A3 average July temperature in degrees Fahrenheit
+# A4 percent of 1960 SMSA population 65 years old or older
+## A5 household size, 1960
+## A6 schooling for persons over 22
+# A7 household with full kitchens
+## A8 population per square mile in urbanized areas
+## A9 percent nonwhite population
+# A10 percent office workers
+## A11 poor families (annual income under $3000)
+# A12 relative pollution potential of hydrocarbons
+# A13 relative pollution potential of oxides of Nitrogen
+# A14 relative pollution of Sulfur Dioxide
+# A15 percent relative humidity, annual average at 1pm.
+# B death rate
+```
+
+
+Here we will create a subset of the original dataframe with the desired features.
+```{r}
+myvars <- c("A5", "A6", "A9", "A11", "B")
+deathrate_1 <- deathrate[myvars]
+```
+
+```{r}
+# 3D Scatterplot with Coloring and Vertical Lines
+# and Regression Plane 
+ 
+attach(deathrate_1) 
+s3d <-scatterplot3d(A6,A9,B, pch=16, highlight.3d=TRUE,
+  type="h", main="3D Scatterplot")
+fit <- lm(B ~ A6+ A9, data = deathrate_1) 
+s3d$plane3d(fit)
+
+A6A9 <- ggplot(deathrate_1, aes(x = A6, y = A9)) + geom_point() + geom_point(aes(color = B)) 
+A6A9
+
+attach(deathrate_1) 
+s3d <-scatterplot3d(A5,A6,B, pch=16, highlight.3d=TRUE,
+  type="h", main="3D Scatterplot")
+fit <- lm(B ~ A5+ A6, data = deathrate_1) 
+s3d$plane3d(fit)
+
+A5A6 <- ggplot(deathrate_1, aes(x = A5, y = A6)) + geom_point() + geom_point(aes(color = B)) 
+A5A6
+
+attach(deathrate_1) 
+s3d <-scatterplot3d(A9,A11,B, pch=16, highlight.3d=TRUE,
+  type="h", main="3D Scatterplot")
+fit <- lm(B ~ A9+ A11, data = deathrate_1) 
+s3d$plane3d(fit)
+
+A9A11 <- ggplot(deathrate_1, aes(x = A9, y = A11)) + geom_point() + geom_point(aes(color = B)) 
+A9A11
+```
+
+###############################################################
+# Coerrelations and p-values
+```{r}
+#Finding correlation coeff r with p-values
+#install.packages("psych")
+corr.test(deathrate_1, y = NULL, use =
+"pairwise",method="pearson",adjust="holm",alpha=.05)
+```
+
+```{r}
+# Correlation plot
+ggcorr(deathrate_1, palette = "RdBu", label = TRUE)
+
+ggcorr(deathrate, palette = "RdBu", label = TRUE)
+```
+
+```{r}
+M <- cor(deathrate_1)
+
+#AllDataCor <- cor(deathrate)
+
+#res1 <- cor.mtest(deathrate_1, conf.level = .95)
+
+#res2 <- cor.mtest(deathrate, conf.level = .95)
+
+#corrplot(M, is.corr = TRUE, insig = "n" , method = "ellipse", cl.lim = c(-1, 1))
+
+#corrplot(AllDataCor, is.corr = TRUE, insig = "n" , method = "ellipse", cl.lim = c(-1, 1))
+
+#corrplot(M, p.mat = res1$p, insig = "p-value", method = "ellipse")
+#title(sub = "      Correlations with p value, for p-value>0.05 only")
+
+corrplot(AllDataCor, p.mat = res2$p, insig = "p-value", method = "ellipse")
+title(sub = "      Correlations with p value, for p-value>0.05 only")
+```
+
+
+
+```{r}
+deathrate_2 <- deathrate_1[,-1]
+
+ggpairs(deathrate_1, columns = 1:ncol(deathrate_1), title = "",  
+  axisLabels = "show", columnLabels = colnames(deathrate_1[, 1:5]))
+ggpairs(deathrate_2, columns = 1:ncol(deathrate_2), title = "",  
+  axisLabels = "show", columnLabels = colnames(deathrate_2[, 1:4]))
+```
+```{r}
+#A9 percent nonwhite population
+
+
+nonwhitemodel <- lm(deathrate_1$B ~ deathrate_1$A9)
+
+summary(nonwhitemodel)
+
+A9deaths <- ggplot(deathrate_1, aes(x = A9, y=B)) + geom_point() + 
+  geom_smooth(method='lm') 
+A9deaths
+
+A11deaths <- ggplot(deathrate_1, aes(x = A11, y=B)) + geom_point() + 
+  geom_smooth(method='lm') 
+A11deaths
+
+summary(lm(deathrate_1$B~deathrate_1$A9))
+```
+
+
+###############################################################
+#     Choosing/Comparing models
+
+
+## ** Y^i = A5X1 + A6X2 + A9X3 + A11X4 + error^i, error is normal rv with mean=o and constant varaince for all i.
+
+```{r}
+#Model 1: A5, A6, A9, A11
+fit0<-lm(formula = deathrate_1$B ~ deathrate_1$A5+ deathrate_1$A6 +deathrate_1$A9 + deathrate_1$A11)
+fit1 <- lm(formula = deathrate_1$B ~ deathrate_1$A6 +deathrate_1$A9 + deathrate_1$A11)
+
+# Model 2: without A5
+fit2 <- lm(formula = deathrate_1$B ~  deathrate_1$A9+deathrate_1$A11)
+
+fit3 <- lm(formula = deathrate_1$B ~ deathrate_1$A6+deathrate_1$A9)
+
+anova(fit0,fit1)
+
+anova(fit1,fit2)
+
+
+```
+
+```{r}
+fitA9A11<-lm(deathrate_1$A9 ~ deathrate_1$A11)
+plot(deathrate_1$A9 ~ deathrate_1$A11)
+abline(fitA9A11)
+summary(fitA9A11)
+```
+
+###############################################################
+# Choosing model 2, fit2
+# Testing residuals
+
+```{r}
+summary(fit2)
+```
+
+
+```{r}
+shapiro.test(fit2$residuals)
+```
+```{r}
+
+
+
+plot(fit2)
+qqplot(fit2$residuals)
+```
+```{r}
+hist(fit2$residuals)
+```
+
+###############################################################
+# A few predictions 
+
+```{r}
+results = lm(B ~ A6 + A9 + A11, data=deathrate_1)
+summary(results)
+
+"Prediction: If the minimum value for all the predictors occured"
+newdat1 = data.frame(A6 = 9, A9=0.8, A11 = 9.4)
+predict(results, newdata = newdat1, interval="confidence")
+
+
+"Prediction: If the mean of all the predictors occured"
+newdat2 = data.frame(A6 = 10.97, A9=11.87, A11 = 14.37)
+predict(results, newdata = newdat2, interval="confidence")
+
+"Prediction: If the max of all the predictors occured"
+newdat3 = data.frame(A6 = 12.3, A9=38.50, A11 = 26.40)
+predict(results, newdata = newdat3, interval="confidence")
+
+"Prediction: max min min"
+newdat4 = data.frame(A6 = 12.3, A9=0.8, A11 = 9.4)
+predict(results, newdata = newdat4, interval="confidence")
+```
+
+   
+```{r}
+summary(deathrate_1)
+```
+   
+   
+###############################################################
+###############################################################
+   
+```{r}
+# Below: We will make the REGRESSION "CUBE" for the three variables, and the predicted death rate, given # by a color gradient.
+
+## A6 schooling for persons over 22
+# A7 household with full kitchens
+## A8 population per square mile in urbanized areas
+## A9 percent nonwhite population
+# A10 percent office workers
+## A11 poor families (annual income under $3000)
+
+
+
+level1 <- matrix(nrow = 18, ncol = 38)
+
+x= seq(from=9.4, to=26.4, by = 1)
+y= seq(.8,38.5,1)
+
+for (j in 1:38){
+    for (i in 1:18){
+    level1[i,j] <- predict(results, newdata = data.frame(A6 = 9, A9=y[j], A11 = x[i]))
+  
+  }
+}
+
+# A6 = 10.40
+level2 <- matrix(nrow = 18, ncol = 38)
+
+x= seq(from=9.4, to=26.4, by = 1)
+y= seq(.8,38.5,1)
+
+for (j in 1:38){
+    for (i in 1:18){
+    level2[i,j] <- predict(results, newdata = data.frame(A6 = 10.40, A9=y[j], A11 = x[i]))
+  
+  }
+}
+
+# A6 = 11.05
+level3 <- matrix(nrow = 18, ncol = 38)
+
+x= seq(from=9.4, to=26.4, by = 1)
+y= seq(.8,38.5,1)
+
+for (j in 1:38){
+    for (i in 1:18){
+    level3[i,j] <- predict(results, newdata = data.frame(A6 = 11.05, A9=y[j], A11 = x[i]))
+  
+  }
+}
+
+# A6 = 11.50
+level4 <- matrix(nrow = 18, ncol = 38)
+
+x= seq(from=9.4, to=26.4, by = 1)
+y= seq(.8,38.5,1)
+
+for (j in 1:38){
+    for (i in 1:18){
+    level4[i,j] <- predict(results, newdata = data.frame(A6 = 11.50, A9=y[j], A11 = x[i]))
+  
+  }
+}
+
+# A6 = 12.30
+level5 <- matrix(nrow = 18, ncol = 38)
+
+x= seq(from=9.4, to=26.4, by = 1)
+y= seq(.8,38.5,1)
+
+for (j in 1:38){
+    for (i in 1:18){
+    level5[i,j] <- predict(results, newdata = data.frame(A6 = 12.30, A9=y[j], A11 = x[i]))
+  
+  }
+}
+```
+
+
+
+# ```{r}
+# par(oma=c( 0,0,0,4)) # margin of 4 spaces width at right hand side
+# set.panel( 2,3) # 2X2 matrix of plots
+# image.plot(level1, zlim = c(773,1176))
+# title("schooling (in yrs): 9", ylab = "%Income<3000")
+# image.plot(level2, zlim = c(773,1176))
+# title("10.40")
+# image.plot(level3, zlim = c(773,1176))
+# title("11.05")
+# image.plot(level4, zlim = c(773,1176))
+# title(main = "11.50",
+#       xlab = "%NonWhitePop", ylab = "%Income<3000",
+#       cex.sub = 0.75, font.sub = 3, col.sub = "green"
+#       )
+# image.plot(level5,  zlim = c(773,1176))
+# title("12.30", xlab = "%NonWhitePop")
+#
+# ```
+
+```{r}
+#level1_df <- as.data.frame(level1)
+#image.plot(level1, zlim = c(773,1176))
+#title("schooling (in yrs): 9", ylab = "%Income<3000")
+
+myImagePlot(level1, "A6=9",zlim = c(773,1176))
+myImagePlot(level2,"A6=10.4",zlim = c(773,1176))
+myImagePlot(level3,"A6=11.05",zlim = c(773,1176))
+myImagePlot(level4,"A6=11.5",zlim = c(773,1176))
+myImagePlot(level5,"A6=12.3",zlim = c(773,1176))
+```
+```{r}
+ggplot(deathrate_1, aes(A6, A9, size=A11, color=B)) + 
+   geom_point() + 
+   scale_color_gradient(low="blue", high="red")
+
+ggplot(deathrate_1, aes(A6, A11, size=A9, color=B)) + 
+   geom_point() + 
+   scale_color_gradient(low="blue", high="red")
+
+ggplot(deathrate_1, aes(A9, A11, size=A6, color=B)) + 
+   geom_point() + 
+   scale_color_gradient(low="Blue", high="Orange") +
+    labs( x= "% Non-White",y="% Poor")
+
+ggplot(deathrate_1, aes( A11,B, size=A6, color=A9)) + 
+   geom_point() + 
+   scale_color_gradient(low="Blue", high="Orange") +
+    labs( x= "A11",y="B")
+```
+
+
+
+
+
+
+
+
+```{r}
+d_r = deathrate_1$B     #
+j_t = deathrate_1$A6                # 
+p_u = deathrate_1$A9                 # 
+f_s = deathrate_1$A11        
+
+row_n = c(1:60)
+cbind(deathrate_1, row_n)
+
+### test 1. check regression function is not linear - Plot residuals vs predictor variable.  
+ggplot(fit2, aes(x=deathrate_1$A6, y = .resid))+geom_point(size =2, shape =2)+geom_hline(yintercept=0, linetype="dashed")+xlab("A6")+ylab("Residuals")+ggtitle("Residual 
+by A6 Plot")+geom_point() +geom_text(aes(label=row_n),hjust=0, vjust=0)
+
+### test 2. error terms are not constant variance -  Plot 
+######            absolute or squared residuals against predictor variable.
+ggplot(fit2, aes(x=j_t, y = (.resid)^2))+geom_point(size =1, shape =2,
+color="black")+geom_hline(yintercept=0, col="red",
+linetype="dashed")+xlab("A6")+ylab("squared residuals")+ggtitle("squared residual vs A6 as predictor")+geom_point() +geom_text(aes(label=row_n),hjust=0, vjust=0)+geom_point() +geom_text(aes(label=row_n),hjust=0, vjust=0)
+
+### test 3. The error terms are not independent - Plot residuals vs fitted values.
+ggplot(fit2, aes(x=.fitted, y = .resid))+geom_point(size =1, shape =2,
+color="black")+geom_hline(yintercept=0, col="black",
+linetype="dashed")+xlab("Fitted values")+ylab("Residuals")+ggtitle("Residual vs
+Fitted Plot")+geom_point() +geom_text(aes(label=row_n),hjust=0, vjust=0)
+
+### 6. Box plot of residuals (outliers).  e are the residuals
+# Boxplot of pop over 65 by death rate
+boxplot(fit2$residuals,data=deathrate_1, main="death rate",
+   xlab="Death rate")
+
+### 7. Normal probability plot of residuals. here e is the residuals
+# visual test for normality using the residuals from the regression
+hist(fit2$residuals,main="Histogram residuals",xlab="death rate",border="blue",col="green",las=1,breaks=25)
+qqnorm(fit2$residuals)
+qqline(fit2$residuals)
+```
+
